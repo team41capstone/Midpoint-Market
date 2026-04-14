@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Stock Trading — Admin Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0a0d12;
+    --surface:  #111620;
+    --border:   #1e2636;
+    --border2:  #2a3448;
+    --text:     #c8d4e8;
+    --muted:    #4a5878;
+    --accent:   #00d4aa;
+    --accent2:  #3b82f6;
+    --danger:   #f87171;
+    --warn:     #fbbf24;
+    --success:  #34d399;
+    --mono:     'IBM Plex Mono', monospace;
+    --sans:     'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  #login-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #login-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .login-box {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 40px 44px;
+    width: 400px;
+    box-shadow: 0 32px 80px rgba(0,0,0,.5);
+  }
+  .login-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+  .login-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #e2eaf8;
+    margin-bottom: 4px;
+  }
+  .login-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 28px;
+  }
+  .login-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .login-field label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+  .login-field input {
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    width: 100%;
+  }
+  .login-field input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,212,170,.1);
+  }
+  #login-error, #reg-error {
+    background: rgba(248,113,113,.08);
+    color: var(--danger);
+    border: 1px solid rgba(248,113,113,.2);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: none;
+  }
+  #login-btn:disabled, #reg-btn:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+  .login-spinner {
+    display: none;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(2,13,10,.3);
+    border-top-color: #020d0a;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    height: 56px;
+    background: rgba(10,13,18,0.95);
+    border-bottom: 1px solid var(--border2);
+    backdrop-filter: blur(8px);
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .logo-dot {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:0.5; transform:scale(0.7); }
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  #market-status-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+  }
+  .badge-open  { background: rgba(52,211,153,.15); color: var(--success); border: 1px solid rgba(52,211,153,.3); }
+  .badge-closed{ background: rgba(248,113,113,.12); color: var(--danger);  border: 1px solid rgba(248,113,113,.3); }
+  .badge-unknown{ background: rgba(74,88,120,.2); color: var(--muted); border: 1px solid var(--border2); }
+
+  #api-base-input {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    width: 240px;
+    outline: none;
+  }
+
+  #logout-btn {
+    font-size: 12px;
+    padding: 5px 14px;
+    background: rgba(248,113,113,.1);
+    color: var(--danger);
+    border: 1px solid rgba(248,113,113,.25);
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .layout {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    min-height: calc(100vh - 56px);
+  }
+
+  nav {
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    background: rgba(17,22,32,0.7);
+  }
+  .nav-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 20px 8px;
+    margin-top: 16px;
+  }
+  .nav-label:first-child { margin-top: 0; }
+
+  nav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 20px;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all .15s;
+    border-left: 2px solid transparent;
+    cursor: pointer;
+  }
+  nav a:hover { color: var(--text); background: rgba(255,255,255,.03); }
+  nav a.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: rgba(0,212,170,.06);
+  }
+
+  main {
+    padding: 32px;
+    overflow-y: auto;
+  }
+  .section { display: none; }
+  .section.active { display: block; animation: fadeIn .25s ease; }
+
+  @keyframes fadeIn {
+    from { opacity:0; transform:translateY(6px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+
+  .page-header {
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .page-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #e2eaf8;
+    margin-bottom: 4px;
+  }
+  .page-subtitle {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .form-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="time"],
+  input[type="date"],
+  input[type="email"],
+  input[type="password"],
+  select {
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    padding: 9px 12px;
+    border-radius: 6px;
+    outline: none;
+    width: 100%;
+  }
+
+  .form-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  button {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 20px;
+    cursor: pointer;
+    transition: all .15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #020d0a;
+  }
+  .btn-secondary {
+    background: rgba(255,255,255,.07);
+    color: var(--text);
+    border: 1px solid var(--border2);
+  }
+  .btn-danger {
+    background: rgba(248,113,113,.12);
+    color: var(--danger);
+    border: 1px solid rgba(248,113,113,.2);
+    padding: 5px 12px;
+    font-size: 12px;
+  }
+  .btn-small {
+    padding: 5px 12px;
+    font-size: 12px;
+    background: var(--accent2);
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  #toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    max-width: 340px;
+    animation: slideIn .25s ease;
+    border: 1px solid;
+  }
+  .toast.success { background: rgba(52,211,153,.1); color: var(--success); border-color: rgba(52,211,153,.25); }
+  .toast.error   { background: rgba(248,113,113,.1); color: var(--danger); border-color: rgba(248,113,113,.25); }
+  .toast.info    { background: rgba(59,130,246,.1); color: var(--accent2); border-color: rgba(59,130,246,.25); }
+
+  @keyframes slideIn {
+    from { opacity:0; transform:translateX(20px); }
+    to { opacity:1; transform:translateX(0); }
+  }
+
+  .alert {
+    display: block;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    border: 1px solid;
+  }
+  .alert.success { background: rgba(52,211,153,.08); color: var(--success); border-color: rgba(52,211,153,.2); }
+  .alert.error   { background: rgba(248,113,113,.08); color: var(--danger); border-color: rgba(248,113,113,.2); }
+  .alert.info    { background: rgba(59,130,246,.08); color: var(--accent2); border-color: rgba(59,130,246,.2); }
+  .alert.hidden  { display: none; }
+
+  .stocks-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .stocks-table th {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border2);
+    white-space: nowrap;
+  }
+  .stocks-table td {
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: middle;
+  }
+
+  .ticker-badge {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    background: rgba(0,212,170,.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,212,170,.2);
+  }
+
+  .holiday-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .holiday-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .holiday-date {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--warn);
+  }
+  .holiday-name {
+    font-size: 13px;
+    color: var(--muted);
+    flex: 1;
+    margin-left: 16px;
+  }
+
+  .settings-display {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .setting-item {
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+  }
+  .setting-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .setting-value {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--accent2);
+  }
+
+  .empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,.1);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .loading-row td {
+    text-align: center;
+    padding: 32px !important;
+    color: var(--muted);
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 600;
+    color: #e2eaf8;
+  }
+  .stat-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  hr.divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+
+  .inline-price-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .inline-price-form input {
+    width: 110px;
+    padding: 5px 10px;
+    font-size: 13px;
+  }
+  .site-logo {
+  width: 85px;
+  height: 85px;
+  object-fit: contain;
+  display: block;
+}
+</style>
+</head>
+<body>
+
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">
+  <img src="midpointlogo.png" alt="STS Admin Logo" class="site-logo">
+  <span>Admin Console</span>
+</div>
+
+    <div style="display:flex;gap:0;margin-bottom:28px;border-bottom:1px solid var(--border2);">
+      <button id="tab-login" onclick="switchAuthTab('login')"
+        style="flex:1;background:none;border:none;border-bottom:2px solid var(--accent);color:var(--accent);
+               font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.08em;padding:8px 0;
+               text-transform:uppercase;cursor:pointer;border-radius:0;">
+        Sign In
+      </button>
+      <button id="tab-register" onclick="switchAuthTab('register')"
+        style="flex:1;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);
+               font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.08em;padding:8px 0;
+               text-transform:uppercase;cursor:pointer;border-radius:0;">
+        Register
+      </button>
+    </div>
+
+    <div id="panel-login">
+      <div class="login-title">Administrator Login</div>
+      <div class="login-sub">Enter your credentials to access the console</div>
+      <div id="login-error"></div>
+      <div class="login-field">
+        <label>Username</label>
+        <input type="text" id="login-user" placeholder="admin username" autocomplete="username" />
+      </div>
+      <div class="login-field">
+        <label>Password</label>
+        <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button class="btn-primary" id="login-btn" onclick="doLogin()" style="width:100%;padding:11px;margin-top:4px;font-size:14px;">
+        <span class="login-spinner" id="login-spinner"></span>
+        <span id="login-btn-text">Sign In →</span>
+      </button>
+    </div>
+
+    <div id="panel-register" style="display:none;">
+      <div class="login-title">Create Admin Account</div>
+      <div class="login-sub">Creates a user with admin role</div>
+      <div id="reg-error"></div>
+      <div id="reg-success" class="alert success hidden"></div>
+
+      <div class="login-field">
+        <label>Full Name</label>
+        <input type="text" id="reg-name" placeholder="e.g. Jane Smith" />
+      </div>
+      <div class="login-field">
+        <label>Username</label>
+        <input type="text" id="reg-user" placeholder="choose a username" autocomplete="off" />
+      </div>
+      <div class="login-field">
+        <label>Email</label>
+        <input type="email" id="reg-email" placeholder="admin@example.com" />
+      </div>
+      <div class="login-field">
+        <label>Password</label>
+        <input type="password" id="reg-pass" placeholder="••••••••" autocomplete="new-password" />
+      </div>
+      <div class="login-field">
+        <label>Registration Key</label>
+        <input type="password" id="reg-key" placeholder="provided by system owner" />
+      </div>
+      <button class="btn-primary" id="reg-btn" onclick="doRegister()" style="width:100%;padding:11px;margin-top:4px;font-size:14px;">
+        <span class="login-spinner" id="reg-spinner"></span>
+        <span id="reg-btn-text">Create Account →</span>
+      </button>
+    </div>
+
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border2);text-align:center;">
+      <a href="market.html" style="font-family:var(--mono);font-size:11px;color:var(--muted);text-decoration:none;letter-spacing:.06em;">
+        ← Customer Portal
+      </a>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="logo">
+  <img src="midpointlogo.png" alt="STS Admin Logo" class="site-logo">
+  <span>Admin Console</span>
+</div>
+  <div class="header-right">
+    <span id="market-status-badge" class="badge-unknown">● CHECKING...</span>
+    <input id="api-base-input" type="text" value="http://localhost:8000" placeholder="http://localhost:8000" />
+    <span id="header-user" style="font-family:var(--mono);font-size:11px;color:var(--muted);display:none;"></span>
+    <button id="logout-btn" style="display:none;" onclick="doLogout()">⏻ Logout</button>
+  </div>
+</header>
+
+<div class="layout">
+  <nav>
+    <div class="nav-label">Overview</div>
+    <a class="active" onclick="showSection('overview')" data-section="overview"><span class="nav-icon">◈</span> Dashboard</a>
+
+    <div class="nav-label">Market</div>
+    <a onclick="showSection('stocks')" data-section="stocks"><span class="nav-icon">▦</span> Stocks</a>
+    <a onclick="showSection('create-stock')" data-section="create-stock"><span class="nav-icon">＋</span> Create Stock</a>
+
+    <div class="nav-label">Schedule</div>
+    <a onclick="showSection('market-hours')" data-section="market-hours"><span class="nav-icon">◷</span> Market Hours</a>
+    <a onclick="showSection('holidays')" data-section="holidays"><span class="nav-icon">◻</span> Holidays</a>
+  </nav>
+
+  <main>
+    <section id="overview" class="section active">
+      <div class="page-header">
+        <div class="page-title">Dashboard</div>
+        <div class="page-subtitle">Real-time overview of the Stock Trading System</div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Stocks Listed</div>
+          <div class="stat-value" id="stat-stocks">–</div>
+          <div class="stat-sub">Active on the exchange</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Market Hours</div>
+          <div class="stat-value" id="stat-hours" style="font-size:16px;margin-top:4px;">–</div>
+          <div class="stat-sub">Open → Close</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Upcoming Holidays</div>
+          <div class="stat-value" id="stat-holidays">–</div>
+          <div class="stat-sub">Scheduled closures</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Quick Actions</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button class="btn-primary" onclick="showSection('create-stock')">＋ &nbsp;List New Stock</button>
+          <button class="btn-secondary" onclick="showSection('market-hours')">◷ &nbsp;Update Market Hours</button>
+          <button class="btn-secondary" onclick="showSection('holidays')">◻ &nbsp;Manage Holidays</button>
+          <button class="btn-secondary" onclick="runPriceUpdate()">↻ &nbsp;Trigger Price Update</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Listed Stocks</div>
+        <table class="stocks-table">
+          <thead>
+            <tr>
+              <th>Ticker</th><th>Company</th><th>Type</th><th>Current Price</th>
+              <th>Volume</th><th>Mkt Cap</th><th>Daily High</th><th>Daily Low</th>
+            </tr>
+          </thead>
+          <tbody id="overview-stocks-body">
+            <tr class="loading-row"><td colspan="8"><span class="spinner"></span> Loading stocks…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="stocks" class="section">
+      <div class="page-header">
+        <div class="page-title">Listed Stocks</div>
+        <div class="page-subtitle">All stocks currently trading on the exchange</div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <div class="card-title" style="margin-bottom:0;">Market Listings</div>
+          <button class="btn-secondary" onclick="loadStocks()" style="font-size:12px;padding:6px 14px;">↻ Refresh</button>
+        </div>
+        <table class="stocks-table">
+          <thead>
+            <tr>
+              <th>ID</th><th>Ticker</th><th>Company</th><th>Type</th><th>Current Price</th>
+              <th>Volume</th><th>Mkt Cap</th><th>Opening</th><th>High</th><th>Low</th><th>Override Price</th>
+            </tr>
+          </thead>
+          <tbody id="stocks-table-body">
+            <tr class="loading-row"><td colspan="11"><span class="spinner"></span> Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="create-stock" class="section">
+      <div class="page-header">
+        <div class="page-title">Create New Stock</div>
+        <div class="page-subtitle">List a new company on the exchange</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Stock Details</div>
+        <div id="create-stock-alert" class="alert hidden"></div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label>Admin Username *</label>
+            <input type="text" id="cs-admin" placeholder="e.g. admin01" />
+          </div>
+          <div class="field">
+            <label>Ticker Symbol *</label>
+            <input type="text" id="cs-ticker" placeholder="e.g. AAPL" maxlength="10" oninput="this.value=this.value.toUpperCase()" />
+          </div>
+          <div class="field" style="grid-column:1/-1;">
+            <label>Company Name *</label>
+            <input type="text" id="cs-company" placeholder="e.g. Apple Inc." />
+          </div>
+          <div class="field">
+            <label>Initial Price (USD) *</label>
+            <input type="number" id="cs-price" placeholder="0.00" min="0.01" step="0.01" />
+          </div>
+          <div class="field">
+            <label>Stock Type *</label>
+            <select id="cs-type">
+              <option value="">— Select a type —</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Total Shares (Volume) *</label>
+            <input type="number" id="cs-volume" placeholder="e.g. 1000000" min="1" step="1" />
+          </div>
+        </div>
+
+        <div class="form-footer">
+          <div style="font-size:12px;color:var(--muted);">Volume = total number of shares available for trading</div>
+          <button class="btn-primary" onclick="createStock()">＋ &nbsp;List Stock on Exchange</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="market-hours" class="section">
+      <div class="page-header">
+        <div class="page-title">Market Hours</div>
+        <div class="page-subtitle">Control the window when trades can be executed</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Current Settings</div>
+        <div class="settings-display">
+          <div class="setting-item">
+            <div class="setting-label">Market Open</div>
+            <div class="setting-value" id="cur-open">–</div>
+          </div>
+          <div class="setting-item">
+            <div class="setting-label">Market Close</div>
+            <div class="setting-value" id="cur-close">–</div>
+          </div>
+        </div>
+
+        <hr class="divider">
+        <div class="card-title">Update Hours</div>
+        <div id="hours-alert" class="alert hidden"></div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label>New Open Time</label>
+            <input type="time" id="mh-open" value="09:30" step="60" />
+          </div>
+          <div class="field">
+            <label>New Close Time</label>
+            <input type="time" id="mh-close" value="16:00" step="60" />
+          </div>
+        </div>
+
+        <div class="form-footer">
+          <div style="font-size:12px;color:var(--muted);">Only the most recent Market_Settings row is active.</div>
+          <button class="btn-primary" onclick="updateMarketHours()">◷ &nbsp;Save Market Hours</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="holidays" class="section">
+      <div class="page-header">
+        <div class="page-title">Holiday Schedule</div>
+        <div class="page-subtitle">The market is automatically closed on these dates</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Add Holiday</div>
+        <div id="holiday-alert" class="alert hidden"></div>
+
+        <div class="form-grid cols-3">
+          <div class="field">
+            <label>Date *</label>
+            <input type="date" id="hol-date" />
+          </div>
+          <div class="field" style="grid-column:span 2;">
+            <label>Holiday Name (optional)</label>
+            <input type="text" id="hol-name" placeholder="e.g. New Year's Day" />
+          </div>
+        </div>
+
+        <div class="form-footer">
+          <div style="font-size:12px;color:var(--muted);">Weekends are always closed regardless of this list.</div>
+          <button class="btn-primary" onclick="addHoliday()">◻ &nbsp;Add Holiday</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <div class="card-title" style="margin-bottom:0;">Scheduled Closures</div>
+          <button class="btn-secondary" onclick="loadHolidays()" style="font-size:12px;padding:6px 14px;">↻ Refresh</button>
+        </div>
+        <div id="holiday-list" class="holiday-list">
+          <div class="empty"><span class="spinner"></span></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+const ADMIN_REG_KEY = "midpoint-market-2026";
+let SESSION = null;
+
+function API() {
+  return document.getElementById('api-base-input').value.replace(/\/$/, '');
+}
+
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(API() + path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+function toast(msg, type = 'info') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span><span>${msg}</span>`;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+function showAlert(id, msg, type) {
+  const el = document.getElementById(id);
+  el.className = `alert ${type}`;
+  el.textContent = msg;
+}
+
+function clearAlert(id) {
+  const el = document.getElementById(id);
+  el.className = 'alert hidden';
+  el.textContent = '';
+}
+
+function fmt(n) { return typeof n === 'number' ? '$' + n.toFixed(2) : '–'; }
+function fmtNum(n) { return typeof n === 'number' ? n.toLocaleString() : '–'; }
+
+function switchAuthTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('panel-login').style.display = isLogin ? '' : 'none';
+  document.getElementById('panel-register').style.display = isLogin ? 'none' : '';
+
+  const tLogin = document.getElementById('tab-login');
+  const tReg = document.getElementById('tab-register');
+  tLogin.style.borderBottomColor = isLogin ? 'var(--accent)' : 'transparent';
+  tLogin.style.color = isLogin ? 'var(--accent)' : 'var(--muted)';
+  tReg.style.borderBottomColor = isLogin ? 'transparent' : 'var(--accent)';
+  tReg.style.color = isLogin ? 'var(--muted)' : 'var(--accent)';
+}
+
+async function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const user = document.getElementById('reg-user').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pass = document.getElementById('reg-pass').value;
+  const key = document.getElementById('reg-key').value;
+  const errEl = document.getElementById('reg-error');
+  const sucEl = document.getElementById('reg-success');
+  const btn = document.getElementById('reg-btn');
+  const spinner = document.getElementById('reg-spinner');
+  const btnText = document.getElementById('reg-btn-text');
+
+  errEl.style.display = 'none';
+  sucEl.className = 'alert success hidden';
+  sucEl.textContent = '';
+
+  if (!name || !user || !email || !pass || !key) {
+    errEl.textContent = 'All fields are required.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  if (key !== ADMIN_REG_KEY) {
+    errEl.textContent = 'Invalid registration key.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  spinner.style.display = 'inline-block';
+  btnText.textContent = 'Creating…';
+
+  try {
+    await apiFetch('/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        full_name: name,
+        username: user,
+        email: email,
+        password_hash: pass,
+        role: 'admin'
+      })
+    });
+
+    sucEl.textContent = `✓ Admin account created for "${user}". You can now sign in.`;
+    sucEl.className = 'alert success';
+    ['reg-name','reg-user','reg-email','reg-pass','reg-key'].forEach(id => document.getElementById(id).value = '');
+    setTimeout(() => switchAuthTab('login'), 1200);
+  } catch (e) {
+    errEl.textContent = e.message || 'Registration failed.';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    btnText.textContent = 'Create Account →';
+  }
+}
+
+async function doLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const btn = document.getElementById('login-btn');
+  const spinner = document.getElementById('login-spinner');
+  const btnText = document.getElementById('login-btn-text');
+  const errEl = document.getElementById('login-error');
+
+  if (!user || !pass) {
+    errEl.textContent = 'Please enter both username and password.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  spinner.style.display = 'inline-block';
+  btnText.textContent = 'Verifying…';
+  errEl.style.display = 'none';
+
+  try {
+    const data = await apiFetch('/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: user, password: pass })
+    });
+
+    if ((data.role || '').toLowerCase() !== 'admin') {
+      throw new Error('This account is not an admin account.');
+    }
+
+    SESSION = data;
+    document.getElementById('login-overlay').style.display = 'none';
+    document.getElementById('header-user').textContent = '⬡ ' + data.username;
+    document.getElementById('header-user').style.display = '';
+    document.getElementById('logout-btn').style.display = '';
+    await loadOverview();
+    await refreshMarketStatus();
+  } catch (e) {
+    errEl.textContent = e.message || 'Invalid credentials.';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    btnText.textContent = 'Sign In →';
+  }
+}
+
+function doLogout() {
+  if (!confirm('Sign out of the Admin Console?')) return;
+  SESSION = null;
+  document.getElementById('login-overlay').style.display = 'flex';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').style.display = 'none';
+  document.getElementById('header-user').style.display = 'none';
+  document.getElementById('logout-btn').style.display = 'none';
+}
+
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+  document.getElementById(name).classList.add('active');
+  document.querySelector(`[data-section="${name}"]`).classList.add('active');
+
+  if (name === 'overview') loadOverview();
+  if (name === 'stocks') loadStocks();
+  if (name === 'market-hours') loadMarketSettings();
+  if (name === 'holidays') loadHolidays();
+}
+
+async function refreshMarketStatus() {
+  const badge = document.getElementById('market-status-badge');
+  try {
+    const s = await apiFetch('/market/status');
+    const isOpen = !!s.is_open;
+    badge.textContent = isOpen ? '● MARKET OPEN' : '● MARKET CLOSED';
+    badge.className = isOpen ? 'badge-open' : 'badge-closed';
+  } catch {
+    badge.textContent = '● OFFLINE';
+    badge.className = 'badge-unknown';
+  }
+}
+
+async function loadOverview() {
+  try {
+    const [stocks, settings, holidaysData] = await Promise.all([
+      apiFetch('/stocks'),
+      apiFetch('/admin/market-settings'),
+      apiFetch('/admin/holidays')
+    ]);
+
+    document.getElementById('stat-stocks').textContent = stocks.length;
+    document.getElementById('stat-hours').textContent = `${(settings.open_time || '09:30:00').slice(0,5)} → ${(settings.close_time || '16:00:00').slice(0,5)}`;
+
+    const today = new Date().toISOString().split('T')[0];
+    const upcoming = (holidaysData.holidays || []).filter(h => h.holiday_date >= today);
+    document.getElementById('stat-holidays').textContent = upcoming.length;
+
+    const tbody = document.getElementById('overview-stocks-body');
+    if (!stocks.length) {
+      tbody.innerHTML = `<tr><td colspan="8" class="empty">No stocks listed yet.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = stocks.map(s => `
+      <tr>
+        <td><span class="ticker-badge">${s.ticker}</span></td>
+        <td>${s.company_name}</td>
+        <td style="color:var(--muted);font-size:12px;">${s.type || '–'}</td>
+        <td>${fmt(s.current_price)}</td>
+        <td>${fmtNum(s.volume)}</td>
+        <td>$${fmtNum(Math.round((s.volume || 0) * (s.current_price || 0)))}</td>
+        <td style="color:var(--success)">${fmt(s.daily_high)}</td>
+        <td style="color:var(--danger)">${fmt(s.daily_low)}</td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function loadStocks() {
+  const tbody = document.getElementById('stocks-table-body');
+  tbody.innerHTML = `<tr class="loading-row"><td colspan="11"><span class="spinner"></span> Loading…</td></tr>`;
+
+  try {
+    const stocks = await apiFetch('/stocks');
+    if (!stocks.length) {
+      tbody.innerHTML = `<tr><td colspan="11" class="empty">No stocks found.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = stocks.map(s => `
+      <tr>
+        <td style="color:var(--muted);font-family:var(--mono);font-size:12px;">#${s.stock_id}</td>
+        <td><span class="ticker-badge">${s.ticker}</span></td>
+        <td>${s.company_name}</td>
+        <td style="color:var(--muted);font-size:12px;">${s.type || '–'}</td>
+        <td>${fmt(s.current_price)}</td>
+        <td>${fmtNum(s.volume)}</td>
+        <td>$${fmtNum(Math.round((s.volume || 0) * (s.current_price || 0)))}</td>
+        <td>${fmt(s.opening_price)}</td>
+        <td style="color:var(--success)">${fmt(s.daily_high)}</td>
+        <td style="color:var(--danger)">${fmt(s.daily_low)}</td>
+        <td>
+          <div class="inline-price-form">
+            <input type="number" id="price-${s.stock_id}" placeholder="${s.current_price}" min="0.01" step="0.01" />
+            <button class="btn-small" onclick="overridePrice(${s.stock_id})">Set</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="11" style="color:var(--danger);text-align:center;padding:20px;">Error: ${e.message}</td></tr>`;
+  }
+}
+
+async function overridePrice(stockId) {
+  const input = document.getElementById(`price-${stockId}`);
+  const newPrice = parseFloat(input.value);
+  if (isNaN(newPrice) || newPrice <= 0) {
+    toast('Enter a valid price > 0', 'error');
+    return;
+  }
+
+  try {
+    const res = await apiFetch(`/admin/stocks/${stockId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ new_price: newPrice })
+    });
+    toast(`${res.ticker} price updated to $${newPrice.toFixed(2)}`, 'success');
+    loadStocks();
+    loadOverview();
+  } catch (e) {
+    toast('Failed to update price: ' + e.message, 'error');
+  }
+}
+
+async function createStock() {
+  clearAlert('create-stock-alert');
+
+  const admin = document.getElementById('cs-admin').value.trim();
+  const ticker = document.getElementById('cs-ticker').value.trim().toUpperCase();
+  const company = document.getElementById('cs-company').value.trim();
+  const price = parseFloat(document.getElementById('cs-price').value);
+  const volume = parseInt(document.getElementById('cs-volume').value, 10);
+
+  if (!admin || !ticker || !company || isNaN(price) || isNaN(volume)) {
+    showAlert('create-stock-alert', 'All fields are required.', 'error');
+    return;
+  }
+
+  try {
+    const res = await apiFetch('/admin/stocks', {
+      method: 'POST',
+      body: JSON.stringify({
+        admin_username: admin,
+        ticker: ticker,
+        company_name: company,
+        initial_price: price,
+        volume: volume
+      })
+    });
+
+    showAlert('create-stock-alert', `✓ ${ticker} listed successfully — Stock ID #${res.stock_id}`, 'success');
+    toast(`${ticker} listed on exchange!`, 'success');
+
+    ['cs-admin','cs-ticker','cs-company','cs-price','cs-volume'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('cs-type').value = '';
+
+    loadStocks();
+    loadOverview();
+  } catch (e) {
+    showAlert('create-stock-alert', e.message, 'error');
+  }
+}
+
+async function loadMarketSettings() {
+  try {
+    const data = await apiFetch('/admin/market-settings');
+    document.getElementById('cur-open').textContent = (data.open_time || '09:30:00').slice(0,5);
+    document.getElementById('cur-close').textContent = (data.close_time || '16:00:00').slice(0,5);
+    document.getElementById('mh-open').value = (data.open_time || '09:30:00').slice(0,5);
+    document.getElementById('mh-close').value = (data.close_time || '16:00:00').slice(0,5);
+  } catch (e) {
+    showAlert('hours-alert', e.message, 'error');
+  }
+}
+
+async function updateMarketHours() {
+  clearAlert('hours-alert');
+  const openTime = document.getElementById('mh-open').value;
+  const closeTime = document.getElementById('mh-close').value;
+
+  if (!openTime || !closeTime) {
+    showAlert('hours-alert', 'Please enter both open and close times.', 'error');
+    return;
+  }
+
+  try {
+    await apiFetch('/admin/market-settings', {
+      method: 'PUT',
+      body: JSON.stringify({
+        open_time: openTime + ':00',
+        close_time: closeTime + ':00'
+      })
+    });
+
+    showAlert('hours-alert', 'Market hours updated successfully.', 'success');
+    toast('Market hours saved.', 'success');
+    loadMarketSettings();
+    refreshMarketStatus();
+    loadOverview();
+  } catch (e) {
+    showAlert('hours-alert', e.message, 'error');
+  }
+}
+
+async function loadHolidays() {
+  const list = document.getElementById('holiday-list');
+  list.innerHTML = `<div class="empty"><span class="spinner"></span></div>`;
+
+  try {
+    const data = await apiFetch('/admin/holidays');
+    const holidays = data.holidays || [];
+
+    if (!holidays.length) {
+      list.innerHTML = `<div class="empty">No holidays scheduled.</div>`;
+      return;
+    }
+
+    list.innerHTML = holidays.map(h => `
+      <div class="holiday-item">
+        <div class="holiday-date">${h.holiday_date}</div>
+        <div class="holiday-name">${h.holiday_name || ''}</div>
+        <button class="btn-danger" onclick="deleteHoliday('${h.holiday_date}')">Delete</button>
+      </div>
+    `).join('');
+  } catch (e) {
+    list.innerHTML = `<div class="empty" style="color:var(--danger);">${e.message}</div>`;
+  }
+}
+
+async function addHoliday() {
+  clearAlert('holiday-alert');
+  const date = document.getElementById('hol-date').value;
+  const name = document.getElementById('hol-name').value.trim();
+
+  if (!date) {
+    showAlert('holiday-alert', 'Please select a date.', 'error');
+    return;
+  }
+
+  try {
+    await apiFetch('/admin/holidays', {
+      method: 'POST',
+      body: JSON.stringify({
+        holiday_date: date,
+        holiday_name: name
+      })
+    });
+
+    showAlert('holiday-alert', 'Holiday added successfully.', 'success');
+    toast('Holiday added.', 'success');
+    document.getElementById('hol-date').value = '';
+    document.getElementById('hol-name').value = '';
+    loadHolidays();
+    loadOverview();
+  } catch (e) {
+    showAlert('holiday-alert', e.message, 'error');
+  }
+}
+
+async function deleteHoliday(date) {
+  if (!confirm(`Delete holiday ${date}?`)) return;
+
+  try {
+    await apiFetch(`/admin/holidays/${date}`, { method: 'DELETE' });
+    toast('Holiday deleted.', 'success');
+    loadHolidays();
+    loadOverview();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function runPriceUpdate() {
+  try {
+    const res = await apiFetch('/admin/run-price-update', { method: 'POST' });
+    toast(res.message || 'Price update triggered.', 'success');
+    loadStocks();
+    loadOverview();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  ['login-user','login-pass'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') doLogin();
+    });
+  });
+});
+</script>
+</body>
+</html>
