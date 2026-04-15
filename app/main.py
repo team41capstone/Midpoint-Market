@@ -4,6 +4,9 @@ import random
 import asyncio
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from app.database import engine, test_db_connection
 from app.schemas import (
     UserCreate,
@@ -135,6 +138,11 @@ async def market_price_updater():
 
 
 app = FastAPI()
+BASE_DIR = Path(__file__).resolve().parent.parent
+FRONTEND_DIR = BASE_DIR / "frontend"
+STATIC_DIR = BASE_DIR / "static"
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 app.add_middleware(
     CORSMiddleware,
@@ -158,6 +166,25 @@ def run_price_update():
 @app.get("/")
 def root():
     return {"message": "Stock Trading API running"}
+
+@app.get("/admin-page")
+def admin_page():
+    return FileResponse(FRONTEND_DIR / "admin.html")
+
+
+@app.get("/market-page")
+def market_page():
+    return FileResponse(FRONTEND_DIR / "market.html")
+
+
+@app.get("/admin.html")
+def admin_html():
+    return FileResponse(FRONTEND_DIR / "admin.html")
+
+
+@app.get("/market.html")
+def market_html():
+    return FileResponse(FRONTEND_DIR / "market.html")
 
 
 @app.get("/test-db")
