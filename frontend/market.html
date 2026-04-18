@@ -266,7 +266,7 @@
     </nav>
     <div class="hdr-right">
       <span id="mkt-badge" class="b-unk">● CHECKING…</span>
-      <input id="api-inp" type="text" value="http://localhost:8000" placeholder="http://localhost:8000"/>
+      <input id="api-inp" type="text" value="" placeholder="Same site API"/>
       <div class="user-chip">
         <div class="user-av" id="u-av">?</div>
         <span id="u-lbl" style="font-family:var(--mono);font-size:11px;color:var(--muted);"></span>
@@ -440,7 +440,10 @@ let TRADE = null;
 let CMODE = 'dep';
 let PREV_PRICES = {};
 
-const API = () => document.getElementById('api-inp').value.replace(/\/$/, '');
+const API = () => {
+  const v = document.getElementById('api-inp').value.trim();
+  return (v || window.location.origin).replace(/\/$/, '');
+};
 
 const fmt = n => typeof n === 'number' ? '$' + n.toFixed(2) : '–';
 const fmtN = n => typeof n === 'number' ? n.toLocaleString() : '–';
